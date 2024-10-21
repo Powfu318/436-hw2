@@ -16,7 +16,7 @@ library(ggplot2)
 library(dplyr)
 
 # Load the dataset
-student_data <- read.csv("StudentPerformanceFactors.csv")
+student_data <- read.csv("https://raw.githubusercontent.com/Powfu318/436-hw2/refs/heads/main/StudentPerformanceFactors.csv")
 
 # Define UI
 ui <- fluidPage(
