@@ -1,0 +1,117 @@
+---
+title: "436 hw2"
+output: html_document
+date: "2024-10-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+You can also embed plots, for example:
+
+```{r}
+library(shiny)
+library(ggplot2)
+library(dplyr)
+
+# Load the dataset
+student_data <- read.csv("StudentPerformanceFactors.csv")
+
+# Define UI
+ui <- fluidPage(
+    titlePanel("Student Performance Analysis"),
+    
+    sidebarLayout(
+        sidebarPanel(
+            sliderInput("hours", "Hours Studied:", min = 0, max = 30, value = c(5, 25)),
+            sliderInput("attendance", "Attendance (%):", min = 50, max = 100, value = c(60, 100)),
+            selectInput("parental_involvement", "Parental Involvement:", 
+                        choices = c("Low", "Medium", "High")),
+            checkboxGroupInput("gender", "Gender:", choices = c("Male", "Female"), selected = c("Male", "Female")),
+            checkboxGroupInput("education_level", "Parental Education Level:", 
+                               choices = c("High School", "College", "Postgraduate")),
+            selectInput("school_type", "School Type:", choices = c("Public", "Private")),
+            checkboxInput("extracurricular", "Extracurricular Activities", value = TRUE)
+        ),
+        
+        mainPanel(
+            plotOutput("scatterPlot"),
+            plotOutput("barPlot")
+        )
+    )
+)
+
+# Define server logic
+server <- function(input, output) {
+    
+    # Reactive expression to filter data based on input
+    filtered_data <- reactive({
+        data <- student_data %>%
+            filter(Hours_Studied >= input$hours[1] & Hours_Studied <= input$hours[2],
+                   Attendance >= input$attendance[1] & Attendance <= input$attendance[2],
+                   Parental_Involvement == input$parental_involvement,
+                   Gender %in% input$gender,
+                   Parental_Education_Level %in% input$education_level,
+                   School_Type == input$school_type)
+        
+        # If extracurricular filter is checked, include it
+        if (input$extracurricular) {
+            data <- data %>%
+                filter(Extracurricular_Activities == "Yes")
+        }
+        
+        # If no data remains after filtering, return NULL to prevent plot errors
+        if (nrow(data) == 0) {
+            return(NULL)
+        } else {
+            return(data)
+        }
+    })
+    
+    # Scatter plot: Hours Studied vs Exam Score
+    output$scatterPlot <- renderPlot({
+        data <- filtered_data()
+        
+        # If no data after filtering, show an empty plot with a message
+        if (is.null(data)) {
+            ggplot() + 
+                annotate("text", x = 0.5, y = 0.5, label = "No data available for the selected filters", size = 6, color = "red") + 
+                theme_void()
+        } else {
+            ggplot(data, aes(x = Hours_Studied, y = Exam_Score, color = Gender)) +
+                geom_point() +
+                labs(title = "Hours Studied vs Exam Score", x = "Hours Studied", y = "Exam Score") +
+                theme_minimal()
+        }
+    })
+    
+    # Bar plot: Average Exam Score by Parental Involvement
+    output$barPlot <- renderPlot({
+        data <- filtered_data()
+        
+        # If no data after filtering, show an empty plot with a message
+        if (is.null(data)) {
+            ggplot() + 
+                annotate("text", x = 0.5, y = 0.5, label = "No data available for the selected filters", size = 6, color = "red") + 
+                theme_void()
+        } else {
+            data %>%
+                group_by(Parental_Involvement) %>%
+                summarise(Average_Score = mean(Exam_Score)) %>%
+                ggplot(aes(x = Parental_Involvement, y = Average_Score, fill = Parental_Involvement)) +
+                geom_bar(stat = "identity") +
+                labs(title = "Average Exam Score by Parental Involvement", x = "Parental Involvement", y = "Average Exam Score") +
+                theme_minimal()
+        }
+    })
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
